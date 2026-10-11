@@ -1,0 +1,58 @@
+---
+title: "Next.js 16 迁徙笔记：异步参数与 Proxy"
+description: "记录从 Next.js 15 升级到 16 时遇到的破坏性变更，以及异步 params、middleware 改名 proxy 的实际处理方式。"
+date: "2025-06-18"
+tags: ["Next.js", "React", "工程化"]
+---
+
+Next.js 16 是一次改动不小的版本。本文记录我在真实项目中升级时踩到的几个点，以及处理方式。
+
+## 异步的 params 与 searchParams
+
+从 15 开始，`params` 和 `searchParams` 就变成了 Promise，到了 16，同步访问已被彻底移除。
+
+```tsx
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  return <h1>{slug}</h1>;
+}
+```
+
+配合 typegen 生成的类型助手会更舒服：
+
+```tsx
+export default async function Page(props: PageProps<"/blog/[slug]">) {
+  const { slug } = await props.params;
+  return <h1>{slug}</h1>;
+}
+```
+
+## middleware 改名为 proxy
+
+`middleware.ts` 被重命名为 `proxy.ts`，函数名也从 `middleware` 变成 `proxy`。功能不变，但语义更聚焦于「请求边界的路由处理」。
+
+```ts
+import { NextResponse, type NextRequest } from "next/server";
+
+export function proxy(request: NextRequest) {
+  return NextResponse.redirect(new URL("/home", request.url));
+}
+
+export const config = { matcher: "/about/:path*" };
+```
+
+> 注意：`proxy` 不再支持 `edge` runtime，默认运行在 Node.js runtime。
+
+## Turbopack 成为默认
+
+16 中 Turbopack 已是 `next dev` 和 `next build` 的默认打包器，不再需要手动加 `--turbopack`。如果你有自定义 webpack 配置，构建会直接失败，需要迁移或显式使用 `--webpack`。
+
+## 一些被移除的东西
+
+- `next lint` 命令被移除，改用 ESLint CLI 直接执行。
+- `serverRuntimeConfig` / `publicRuntimeConfig` 被移除，改用环境变量。
+- AMP 相关 API 全部移除。
+
+## 小结
+
+升级的摩擦主要来自「同步改异步」和「命名变更」。建议先用官方 codemod 跑一遍，再逐项对照破坏性变更清单处理，最后以一次完整的 `next build` 收尾验证。

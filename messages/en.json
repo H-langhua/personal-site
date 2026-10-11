@@ -1,0 +1,144 @@
+{
+  "meta": {
+    "title": "Langfa Huang · Frontend Engineer",
+    "description": "Personal site of a frontend engineer: portfolio, blog and interactive labs. Focused on web experience, visualization and engineering."
+  },
+  "nav": {
+    "home": "Home",
+    "projects": "Projects",
+    "blog": "Blog",
+    "labs": "Labs",
+    "about": "About"
+  },
+  "common": {
+    "readMore": "Read more",
+    "viewAll": "View all",
+    "viewProject": "View project",
+    "visit": "Visit site",
+    "source": "Source",
+    "backHome": "Back home",
+    "theme": "Toggle theme",
+    "language": "Switch language",
+    "menu": "Open menu"
+  },
+  "home": {
+    "greeting": "Hi, I'm",
+    "name": "Langfa Huang",
+    "role": "Frontend Engineer",
+    "tagline": "Turning complex products into smooth, reliable and polished web experiences.",
+    "intro": "I focus on frontend architecture, visualization and performance. I love solving real problems with solid engineering, and shipping ideas into interactive prototypes fast.",
+    "ctaProjects": "View projects",
+    "ctaContact": "Get in touch",
+    "stats": {
+      "years": "Years of experience",
+      "projects": "Projects shipped",
+      "demos": "Interactive demos"
+    },
+    "aboutTitle": "About me",
+    "aboutMore": "Learn more",
+    "skillsTitle": "Tech stack",
+    "skillsSubtitle": "Technologies I use day to day",
+    "projectsTitle": "Featured projects",
+    "projectsSubtitle": "Products and projects I built from scratch or contributed to",
+    "postsTitle": "Latest posts",
+    "postsSubtitle": "Thoughts and hands-on practice",
+    "labsTitle": "Interactive labs",
+    "labsSubtitle": "Small, continuously updated frontend experiments",
+    "contactTitle": "Let's build something fun",
+    "contactDesc": "If you want to collaborate, hire or just chat, feel free to reach out.",
+    "contactCta": "Email me"
+  },
+  "projects": {
+    "title": "Projects",
+    "subtitle": "Products and projects I've worked on",
+    "all": "All",
+    "empty": "No projects in this category yet",
+    "tech": "Tech stack",
+    "highlights": "Highlights",
+    "backToList": "Back to projects",
+    "role": "Role"
+  },
+  "blog": {
+    "title": "Blog",
+    "subtitle": "Notes on frontend, engineering and visualization",
+    "readingTime": "{minutes} min read",
+    "publishedOn": "Published on",
+    "updatedOn": "Updated on",
+    "backToList": "Back to posts",
+    "empty": "No posts yet, stay tuned",
+    "toc": "On this page",
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "labs": {
+    "title": "Interactive Labs",
+    "subtitle": "Frontend experiments you can play with",
+    "open": "Open experiment",
+    "backToList": "Back to labs",
+    "tags": "Tags"
+  },
+  "editor": {
+    "palette": "Palette",
+    "dragHint": "Drag or click to add to the canvas",
+    "properties": "Properties",
+    "label": "Node label",
+    "noSelection": "Select a node to edit",
+    "undo": "Undo",
+    "redo": "Redo",
+    "delete": "Delete",
+    "fit": "Fit",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "exportJson": "Export JSON",
+    "exportPng": "Export PNG",
+    "clear": "Clear",
+    "loadSample": "Load sample",
+    "nodes": {
+      "start": "Start",
+      "process": "Process",
+      "decision": "Decision",
+      "data": "Data",
+      "end": "End"
+    }
+  },
+  "dashboard": {
+    "title": "Realtime Monitoring",
+    "subtitle": "Simulated feed · updates every second",
+    "live": "LIVE",
+    "paused": "Paused",
+    "pause": "Pause",
+    "resume": "Resume",
+    "qps": "QPS",
+    "latency": "Avg latency",
+    "p95": "P95 latency",
+    "errorRate": "Error rate",
+    "connections": "Connections",
+    "throughput": "Throughput",
+    "cpu": "CPU",
+    "memory": "Memory",
+    "traffic": "Traffic & latency",
+    "resources": "Resource usage",
+    "statusCodes": "Response status",
+    "endpoints": "Top endpoints",
+    "regions": "Regions",
+    "eventLog": "Live events",
+    "unitMs": "ms",
+    "unitPct": "%",
+    "unitMbps": "MB/s",
+    "regionNames": ["East", "South", "North", "West", "Global"]
+  },
+  "about": {
+    "title": "About",
+    "subtitle": "My journey and what I care about",
+    "experience": "Experience",
+    "education": "Education",
+    "downloadResume": "Download resume",
+    "skills": "Skills"
+  },
+  "footer": {
+    "rights": "All rights reserved",
+    "builtWith": "Built with Next.js + Tailwind CSS",
+    "sitemap": "Navigation",
+    "connect": "Connect"
+  }
+}

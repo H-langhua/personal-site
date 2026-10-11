@@ -1,0 +1,82 @@
+---
+title: "用 AntV X6 做一个可视化流程编排器"
+description: "从画布初始化到拖拽生成节点、连线、撤销重做与导出，梳理基于 AntV X6 + React 的图形编辑器实现思路。"
+date: "2025-08-02"
+tags: ["AntV X6", "可视化", "React"]
+---
+
+图形编辑器看起来复杂，拆开之后其实是几块相对独立的职责：画布、节点、交互、数据。本文以 AntV X6 为例，梳理一个可用的流程编排器的搭建路径。
+
+## 初始化画布
+
+X6 的核心是 `Graph` 实例，它负责渲染与事件分发。
+
+```ts
+import { Graph } from "@antv/x6";
+
+const graph = new Graph({
+  container: document.getElementById("container")!,
+  grid: true,
+  background: { color: "transparent" },
+  panning: true,
+  mousewheel: { enabled: true, modifiers: ["ctrl", "meta"] },
+  connecting: {
+    snap: true,
+    allowBlank: false,
+    highlight: true,
+  },
+});
+```
+
+## 用 React 渲染节点
+
+纯 SVG 节点在需要复杂交互时会很别扭。`@antv/x6-react-shape` 允许我们注册一个 React 组件作为节点内容。
+
+```ts
+import { register } from "@antv/x6-react-shape";
+
+register({
+  shape: "flow-node",
+  width: 160,
+  height: 48,
+  component: NodeComponent,
+  effect: ["data"],
+});
+```
+
+这样节点的外观与交互就用熟悉的 React 写法来完成，X6 只负责位置、连线和事件。
+
+## 拖拽生成节点
+
+左栏的物料库使用原生 HTML5 拖拽，`drop` 时把屏幕坐标转换成画布坐标再 `addNode`。
+
+```ts
+graph.container.addEventListener("drop", (event) => {
+  const shape = event.dataTransfer?.getData("application/x-node");
+  if (!shape) return;
+  const point = graph.clientToLocal(event.clientX, event.clientY);
+  graph.addNode({ shape, x: point.x, y: point.y, data: { label: "新节点" } });
+});
+```
+
+## 插件：撤销重做与选择
+
+X6 把很多能力做成了插件，按需引入即可。
+
+- `@antv/x6-plugin-history`：撤销 / 重做
+- `@antv/x6-plugin-selection`：框选与多选
+- `@antv/x6-plugin-snapline`：对齐参考线
+- `@antv/x6-plugin-keyboard`：快捷键绑定
+
+## 数据与视图分离
+
+最后一步是把整张图序列化成 JSON，交给业务层保存。
+
+```ts
+const data = graph.toJSON();
+// 持久化 data，恢复时调用 graph.fromJSON(data)
+```
+
+## 小结
+
+画布负责渲染，React 负责节点内部的复杂交互，插件补齐通用能力，JSON 承担数据交换。把这四件事的边界划清楚，图形编辑器就不再是一团乱麻。

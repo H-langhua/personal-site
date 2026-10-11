@@ -1,0 +1,58 @@
+---
+title: "Migrating to Next.js 16: async params and proxy"
+description: "Notes on the breaking changes I hit while upgrading from Next.js 15 to 16, and how I handled async params and the middleware-to-proxy rename."
+date: "2025-06-18"
+tags: ["Next.js", "React", "Engineering"]
+---
+
+Next.js 16 is a sizeable release. These are the things I actually hit while upgrading a real project, and how I dealt with them.
+
+## Async params and searchParams
+
+Since 15, `params` and `searchParams` have been promises, and in 16 synchronous access is fully removed.
+
+```tsx
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  return <h1>{slug}</h1>;
+}
+```
+
+The generated type helpers make this nicer:
+
+```tsx
+export default async function Page(props: PageProps<"/blog/[slug]">) {
+  const { slug } = await props.params;
+  return <h1>{slug}</h1>;
+}
+```
+
+## middleware is now proxy
+
+`middleware.ts` was renamed to `proxy.ts`, and the exported function from `middleware` to `proxy`. Behavior is unchanged, but the name better reflects routing at the request boundary.
+
+```ts
+import { NextResponse, type NextRequest } from "next/server";
+
+export function proxy(request: NextRequest) {
+  return NextResponse.redirect(new URL("/home", request.url));
+}
+
+export const config = { matcher: "/about/:path*" };
+```
+
+> Note: `proxy` no longer supports the `edge` runtime; it runs on the Node.js runtime.
+
+## Turbopack is the default
+
+In 16, Turbopack is the default bundler for both `next dev` and `next build`. A custom webpack config now fails the build unless you migrate it or explicitly opt out with `--webpack`.
+
+## A few removals
+
+- The `next lint` command is removed; run ESLint directly.
+- `serverRuntimeConfig` / `publicRuntimeConfig` are removed; use environment variables.
+- All AMP APIs are gone.
+
+## Wrap-up
+
+Most of the friction comes from "sync to async" and renames. Run the official codemod first, work through the breaking-change checklist, and finish with a full `next build` to verify.

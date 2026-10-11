@@ -1,0 +1,82 @@
+---
+title: "Building a visual flow editor with AntV X6"
+description: "From canvas setup to drag-to-create nodes, connections, undo/redo and export — an approach to graph editors with AntV X6 and React."
+date: "2025-08-02"
+tags: ["AntV X6", "Visualization", "React"]
+---
+
+A graph editor looks complex, but it decomposes into fairly independent responsibilities: the canvas, the nodes, the interactions and the data. Using AntV X6 as an example, here is a path to a usable flow builder.
+
+## Initialize the canvas
+
+The core of X6 is the `Graph` instance, which handles rendering and events.
+
+```ts
+import { Graph } from "@antv/x6";
+
+const graph = new Graph({
+  container: document.getElementById("container")!,
+  grid: true,
+  background: { color: "transparent" },
+  panning: true,
+  mousewheel: { enabled: true, modifiers: ["ctrl", "meta"] },
+  connecting: {
+    snap: true,
+    allowBlank: false,
+    highlight: true,
+  },
+});
+```
+
+## Render nodes with React
+
+Pure SVG nodes get awkward once you need rich interaction. `@antv/x6-react-shape` lets you register a React component as the node content.
+
+```ts
+import { register } from "@antv/x6-react-shape";
+
+register({
+  shape: "flow-node",
+  width: 160,
+  height: 48,
+  component: NodeComponent,
+  effect: ["data"],
+});
+```
+
+Now node appearance and interaction are written in familiar React, while X6 handles position, edges and events.
+
+## Drag to create nodes
+
+The left palette uses native HTML5 drag and drop; on `drop`, convert screen coordinates to canvas coordinates and call `addNode`.
+
+```ts
+graph.container.addEventListener("drop", (event) => {
+  const shape = event.dataTransfer?.getData("application/x-node");
+  if (!shape) return;
+  const point = graph.clientToLocal(event.clientX, event.clientY);
+  graph.addNode({ shape, x: point.x, y: point.y, data: { label: "New node" } });
+});
+```
+
+## Plugins: undo/redo and selection
+
+X6 ships many capabilities as plugins you opt into.
+
+- `@antv/x6-plugin-history`: undo / redo
+- `@antv/x6-plugin-selection`: box and multi selection
+- `@antv/x6-plugin-snapline`: alignment guides
+- `@antv/x6-plugin-keyboard`: keyboard shortcuts
+
+## Separate data from view
+
+The final step is serializing the whole graph to JSON for the app layer to persist.
+
+```ts
+const data = graph.toJSON();
+// Persist data, then restore with graph.fromJSON(data)
+```
+
+## Wrap-up
+
+The canvas renders, React handles complex node interaction, plugins fill in common capabilities, and JSON carries the data. Draw clear boundaries between those four, and a graph editor stops being a mess.
