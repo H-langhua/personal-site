@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/flatten-prefetch.mjs",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
