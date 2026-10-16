@@ -9,7 +9,7 @@ export const siteConfig = {
     en: "Frontend Engineer",
   },
   email: "huanglangfa@gmail.com",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://personal-site.vercel.app",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://personal-site-lyart-two.vercel.app",
   social: {
     github: "https://github.com/huanglangfa",
     twitter: "",
