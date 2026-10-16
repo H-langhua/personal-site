@@ -108,18 +108,23 @@ async function ProjectDetail({ params }: ProjectParams) {
             <div className="flex flex-col gap-2">
               {project.links?.demo ? (
                 <Button asChild>
-                  <a
-                    href={
-                      project.links.demo.startsWith("/")
-                        ? localizedPath(locale, project.links.demo)
-                        : project.links.demo
-                    }
-                    target={project.links.demo.startsWith("/") ? undefined : "_blank"}
-                    rel="noreferrer"
-                  >
-                    <ExternalLink className="size-4" />
-                    {dict.common.visit}
-                  </a>
+                  {project.links.demo.startsWith("/") ? (
+                    // Use next/link so basePath is applied (static export on a
+                    // sub-path, e.g. GitHub Pages project sites).
+                    <Link href={localizedPath(locale, project.links.demo)}>
+                      <ExternalLink className="size-4" />
+                      {dict.common.visit}
+                    </Link>
+                  ) : (
+                    <a
+                      href={project.links.demo}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <ExternalLink className="size-4" />
+                      {dict.common.visit}
+                    </a>
+                  )}
                 </Button>
               ) : null}
               {project.links?.source ? (
