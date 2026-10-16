@@ -11,8 +11,12 @@ const socials = [
   { key: "github", href: siteConfig.social.github, Icon: Code2 },
   { key: "twitter", href: siteConfig.social.twitter, Icon: AtSign },
   { key: "linkedin", href: siteConfig.social.linkedin, Icon: LinkIcon },
-  { key: "email", href: `mailto:${siteConfig.email}`, Icon: Mail },
-] as const;
+  {
+    key: "email",
+    href: siteConfig.email ? `mailto:${siteConfig.email}` : "",
+    Icon: Mail,
+  },
+].filter((item) => Boolean(item.href));
 
 export async function SiteFooter({ locale }: { locale: Locale }) {
   const dict = await getDictionary(locale);

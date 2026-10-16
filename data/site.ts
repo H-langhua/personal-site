@@ -8,12 +8,12 @@ export const siteConfig = {
     zh: "前端开发工程师",
     en: "Frontend Engineer",
   },
-  email: "hi@example.com",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://h-langhua.github.io/personal-site",
+  email: "huanglangfa@gmail.com",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://huanglangfa.github.io/personal-site",
   social: {
-    github: "https://github.com/",
-    twitter: "https://twitter.com/",
-    linkedin: "https://www.linkedin.com/",
+    github: "https://github.com/huanglangfa",
+    twitter: "",
+    linkedin: "",
   },
 } as const;
 

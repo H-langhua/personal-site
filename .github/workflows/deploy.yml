@@ -32,7 +32,7 @@ jobs:
         env:
           # Project pages live at https://<user>.github.io/<repo>/
           NEXT_PUBLIC_BASE_PATH: /personal-site
-          NEXT_PUBLIC_SITE_URL: https://h-langhua.github.io/personal-site
+          NEXT_PUBLIC_SITE_URL: https://huanglangfa.github.io/personal-site
 
       # GitHub Pages ignores folders starting with "_" unless .nojekyll exists
       - run: touch out/.nojekyll
