@@ -1,10 +1,16 @@
 import { ImageResponse } from "next/og";
 
 import { siteConfig } from "@/data/site";
+import { locales } from "@/lib/i18n";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = "Langfa Huang — Frontend Engineer";
+export const dynamic = "force-static";
+
+export function generateStaticParams() {
+  return locales.map((locale) => ({ locale }));
+}
 
 export default function OpengraphImage() {
   return new ImageResponse(

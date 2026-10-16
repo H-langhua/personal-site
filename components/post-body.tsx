@@ -6,7 +6,6 @@ import remarkGfm from "remark-gfm";
 import { mdxComponents } from "./mdx-components";
 
 export async function PostBody({ source }: { source: string }) {
-  "use cache";
   return (
     <div
       data-article

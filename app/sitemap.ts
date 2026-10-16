@@ -6,6 +6,8 @@ import { siteConfig } from "@/data/site";
 import { getAllPosts } from "@/lib/content";
 import { locales } from "@/lib/i18n";
 
+export const dynamic = "force-static";
+
 type ChangeFreq = MetadataRoute.Sitemap[number]["changeFrequency"];
 
 function url(locale: string, path: string) {
