@@ -1,0 +1,125 @@
+---
+title: "A Front-End Triage Playbook: From Blank Screens to Jank"
+description: "Production issues rarely reproduce locally and come with little information. A path from collecting evidence to triaging the five most common failure modes: blank screens, API errors, dead interactions, jank and memory leaks."
+date: "2026-10-12"
+tags: ["Debugging", "Engineering", "Reliability"]
+---
+
+Debugging in production is not like debugging locally. Locally you can set breakpoints, edit code and rerun; in production you get scarce information, business pressure and an issue that often refuses to reproduce. Good triage is about shrinking the problem space fast with the least possible information.
+
+## Three ground rules
+
+**Stop the bleeding first, find the root cause second.** While impact is still spreading, roll back, degrade or flip a kill switch before investigating. A postmortem exists to prevent recurrence, not to gate recovery.
+
+**Control variables, split the range in half.** Start from the boundaries: all users or some? Every route or one? A specific browser, network or release? Every good question eliminates half of what remains.
+
+**Let data decide.** Every hypothesis needs verifiable evidence: a captured request, a stack trace, a metric curve. Guessing costs you a wrong "fix".
+
+## Collecting evidence: don't rush into the code
+
+### A checklist for user reports
+
+- When it happened (as precisely as possible, so logs can be aligned)
+- Environment: browser and version, OS, network, in-page or embedded in an app
+- Account and tenant: new user? specific permissions or configuration?
+- The exact path: which entry point, which clicks in which order
+- A screenshot or recording, plus any console errors (walking a user through F12 works in a pinch)
+- Is it reproducible? Does it survive a different environment or account?
+
+### Error monitoring and source maps
+
+A global listener is a cheap safety net:
+
+```ts
+window.addEventListener("error", (event) => {
+  report({
+    type: "error",
+    message: event.message,
+    source: event.filename,
+    line: event.lineno,
+    column: event.colno,
+    stack: event.error?.stack,
+  });
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  report({ type: "unhandledrejection", reason: String(event.reason) });
+});
+```
+
+Production bundles are minified, so stacks are only readable after source-map resolution. Keep in mind:
+
+- Upload source maps to your monitoring platform instead of publishing them as static assets
+- Beware of framework-wrapped stacks: errors across async boundaries or inside event callbacks often lose business context
+- Attach the release version so errors can be aggregated per deploy
+
+## Toolbox cheat sheet
+
+| Tool / panel | What it is for |
+| --- | --- |
+| Network | Request waterfall, status codes, failure types; throttling to simulate weak networks; replaying requests |
+| Performance | Record main-thread activity to find long tasks, forced synchronous layout and frequent GC |
+| Memory | Heap snapshot diffs for leaks; allocation timeline for object growth |
+| Application | Cache, storage, service worker and cookie anomalies |
+| PerformanceObserver | Capturing long tasks, resources and custom metrics without DevTools in production |
+| Version diffing | Aligning the incident timeline with deploys — one of the most effective tools you have |
+
+Capturing long tasks in production looks like this:
+
+```ts
+const observer = new PerformanceObserver((list) => {
+  for (const entry of list.getEntries()) {
+    if (entry.duration < 100) continue;
+    report({
+      type: "longtask",
+      start: entry.startTime,
+      duration: entry.duration,
+    });
+  }
+});
+
+observer.observe({ entryTypes: ["longtask"] });
+```
+
+Pair it with Web Vitals (LCP / INP / CLS) to size the impact: the release where a metric starts degrading is usually the release that broke it.
+
+## Triaging the five most common failures
+
+### Blank screen
+
+Symptom: the shell renders but content never appears, or the page is entirely white.
+
+- Suspect order: static assets 404 or fail to load → a JS error (the entry chunk died) → a route or permission guard blocks rendering → a render error swallowed by an error boundary
+- How to verify: check HTML and entry JS status codes in Network; read the **first** console error, not the last; diff build versions between a working and a broken environment
+
+### API errors
+
+Symptom: missing data, error toasts, partially unavailable features.
+
+- Suspect order: status codes (4xx often means auth or params, 5xx means the server) → timeouts and weak networks → CORS and protocol issues (https redirects, mixed content) → response shape changes (renamed fields, type changes, null semantics)
+- How to verify: reproduce the request in Network and inspect the raw response; call the endpoint with curl to bypass the front end; compare what the front end sends against gateway logs
+
+### Dead interactions
+
+Symptom: clicks do nothing, modals never open, buttons feel broken.
+
+- Suspect order: a JS error interrupts the handler → event bindings lost (re-rendered lists, broken delegation) → the main thread is blocked by a long task → a layer or overlay swallows the click
+- How to verify: inspect listeners in Elements; check for long tasks at the click timestamp in Performance; use `document.elementFromPoint` to see which element actually receives the click
+
+### Jank
+
+Symptom: dropped frames while scrolling, input lag, stuttering animations.
+
+- Suspect order: long tasks (big array math, synchronous rendering) → unthrottled high-frequency events → heavy DOM churn causing layout and paint storms → GC pauses under memory pressure
+- How to verify: record a flame chart in Performance and align long tasks with the user interaction; use the live FPS meter for a quick read
+
+### Memory leaks
+
+Symptom: everything gets slower the longer a session runs; a refresh fixes it.
+
+- Suspect order: timers and listeners never cleaned up → global caches growing unbounded → closures retaining large objects → third-party instances never destroyed (charts, editors, 3D scenes)
+- How to verify: take two heap snapshots in Memory and diff "retained objects"; watch the heap curve in the Performance memory track — a sawtooth trending upward is the tell
+
+## Wrapping up
+
+Triage is the art of shrinking the problem: gather enough evidence, halve the space with controlled variables, then verify hypotheses with data. Tools and checklists exist to serve that loop — keep them close and stay calm when things break.

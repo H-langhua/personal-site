@@ -1,0 +1,87 @@
+---
+title: "Production Incident Response: From Alert to Postmortem"
+description: "Detect, classify, mitigate, communicate, recover and review — a runbook for incident response, plus a front-end mitigation checklist and a postmortem template."
+date: "2026-10-17"
+tags: ["Incident Response", "Engineering", "Reliability"]
+---
+
+When the alert fires at midnight, the scariest part is rarely the bug itself — it is a team running in circles: one person hot-patching code, another spinning up new chat groups, a third still asking "what exactly is happening?". Incident response is not a test of heroics; it is a test of a process everyone already knows. Under pressure, the process is what keeps actions from deforming.
+
+## The flow at a glance
+
+Detect → classify → mitigate → communicate → confirm recovery → review. The first four steps optimize for speed; the last two for accuracy.
+
+## Step 1: Detect
+
+Two parallel sources:
+
+- **Monitoring alerts**: error rates, blank-screen rates, success rates of critical APIs, Web Vitals degradation. Configure thresholds and aggregation so an alert storm never drowns the real signal
+- **User reports**: support, operations and on-call channels. Agree on a reporting format (time, environment, path, screenshots) to cut the back-and-forth
+
+Alerts need continuous tuning: an alert people ignore is worse than no alert. Aggregate, deduplicate and tier them so "must-see" stays separate from "can-miss".
+
+## Step 2: Classify
+
+The severity decides response speed and who gets paged. Classify before you act, or a P0 will end up handled at a P3's pace.
+
+| Severity | Impact | Response | Notify |
+| --- | --- | --- | --- |
+| P0 | Core features down, all users affected | Immediately, kick off within 10 minutes | Everyone + leadership |
+| P1 | Core features partially degraded, large share of users | Immediately, kick off within 30 minutes | Team + stakeholders |
+| P2 | Non-critical features broken, limited scope | Same day | Team only |
+| P3 | UX issues, a few users | Schedule it | Track and follow up |
+
+Severity can be raised or lowered, but every change needs a stated reason.
+
+## Step 3: Mitigate first
+
+**Restore, then investigate.** The usual front-end mitigations:
+
+| Mitigation | Fits when | Watch out for |
+| --- | --- | --- |
+| Roll back the release | A new version introduced the bug | Fastest restore; verify the old version still matches current APIs |
+| Kill switch | A feature-level failure | Needs feature-flag infrastructure; log every flip |
+| Graceful degradation | A dependency is unavailable | Only works if designed up front; define what degraded data looks like |
+| CDN / cache purge | Broken static assets | Mind the purge scope and origin load |
+| Hot patch | Small, well-understood change | High risk; verify strictly, never make it routine |
+| Pause the rollout | The issue correlates with a canary | Needs rollout controls |
+
+Mitigation actions need a paper trail too: who did what, when, and whether it helped. That trail feeds the postmortem — and prevents two "fixes" from overwriting each other.
+
+## Step 4: Communicate
+
+- **One channel**: sync progress in exactly one place; other channels get conclusions and links only
+- **A fixed cadence**: e.g. status updates every 15 minutes. No progress? Still say "investigation ongoing"
+- **External wording**: impact, current status, estimated time to recovery. When unsure, give a range — never a promise you cannot keep
+
+## Step 5: Confirm recovery
+
+Recovery is not "it looks fine now". Metrics must return to baseline and stay there: error rate, success rate and latency curves aligned with pre-release levels for a sustained window before you call it over.
+
+## Step 6: Review
+
+Blameless, always. A template that works:
+
+- **Timeline**: from the change that introduced the issue (often an hour — or a week — earlier) to full recovery, with every key node
+- **Impact**: a quantified account of affected users, orders or business
+- **Root cause**: keep asking why until you hit a gap in the system or the process. An example:
+
+  Blank pages ← a chunk failed to load ← build hashes changed but the HTML was cached ← the caching policy missed HTML ← the release process lacked a cache purge step
+
+- **Action items**: each layer of root cause maps to one actionable, trackable, owned improvement
+
+| Action item | Type | Owner | Due | Status |
+| --- | --- | --- | --- | --- |
+| Add an HTML cache purge step to releases | Process | (owner) | (date) | Todo |
+| Switch HTML responses to negotiated caching | Engineering | (owner) | (date) | Todo |
+
+## Prevention beats response
+
+- **Canary releases**: validate on a small slice before going wide — catch issues at the canary stage
+- **Observability first**: before a feature ships, confirm its error reporting and critical-path metrics exist
+- **On-call and handover**: make responsibilities, escalation paths and handover checklists explicit
+- **Drills**: practice rollbacks, kill switches and degradation paths so the real thing needs no thinking
+
+## Wrapping up
+
+Incident response is about turning chaos into process: classify, mitigate, communicate, quantify recovery, review honestly. Master the process and your attention is finally free to focus on the problem itself.
