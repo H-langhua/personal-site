@@ -127,11 +127,59 @@
     "unitMbps": "MB/s",
     "regionNames": ["East", "South", "North", "West", "Global"]
   },
+  "threeScene": {
+    "loading": "Building the 3D scene…",
+    "hint": "Drag to orbit · Scroll to zoom · Hover to highlight · Click an object for details",
+    "autoRotate": "Auto rotate",
+    "particles": "Particles",
+    "wireframe": "Wireframe",
+    "reset": "Reset view",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "geometry": "Geometry",
+    "material": "Material",
+    "orbitRadius": "Orbit radius",
+    "unit": "scene units",
+    "close": "Close details",
+    "materials": {
+      "metal": "Metallic",
+      "glow": "Emissive",
+      "glass": "Glass-like"
+    },
+    "objects": {
+      "core": {
+        "name": "Core Crystal",
+        "description": "The emissive crystal at the center, wrapped in a wireframe shell with a breathing float, amplified by bloom post-processing."
+      },
+      "torus-knot": {
+        "name": "Torus Knot",
+        "description": "A classic torus knot orbiting slowly on a tilted path; its emissive material glows against the dark backdrop."
+      },
+      "dodecahedron": {
+        "name": "Dodecahedron",
+        "description": "A metallic dodecahedron lit by a procedurally generated RoomEnvironment, no external HDR map required."
+      },
+      "octahedron": {
+        "name": "Octahedron",
+        "description": "An octahedron on a steep inclined orbit, used to verify raycasting and the overlay-mesh hover highlight."
+      },
+      "torus": {
+        "name": "Torus",
+        "description": "A torus spinning on the outer orbit, casting soft shadows onto the shadow-receiving floor disc."
+      },
+      "capsule": {
+        "name": "Capsule",
+        "description": "A glass-like capsule driven by physical-material transmission, showcasing the PBR material system."
+      },
+      "box": {
+        "name": "Cube",
+        "description": "The innermost cube, handy for trying the smooth camera transition and target follow on click-to-focus."
+      }
+    }
+  },
   "about": {
     "title": "About",
-    "subtitle": "My journey and what I care about",
-    "experience": "Experience",
-    "education": "Education",
+    "subtitle": "My tech stack and what I care about",
     "downloadResume": "Download resume",
     "skills": "Skills"
   },

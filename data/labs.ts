@@ -8,6 +8,16 @@ export type Lab = {
 
 export const labs: Lab[] = [
   {
+    slug: "three-scene",
+    title: { zh: "Three.js 交互 3D 场景", en: "Three.js Interactive 3D Scene" },
+    summary: {
+      zh: "程序化生成的 WebGL 场景：轨道相机、悬浮几何体、粒子星尘与泛光后处理，支持悬停高亮、点击聚焦与主题自适应。",
+      en: "A procedurally generated WebGL scene: orbit camera, floating geometries, particle dust and bloom post-processing, with hover highlight, click-to-focus and theme adaptivity.",
+    },
+    tags: ["Three.js", "WebGL", "TypeScript"],
+    status: "stable",
+  },
+  {
     slug: "x6-editor",
     title: { zh: "AntV X6 图形编辑器", en: "AntV X6 Graph Editor" },
     summary: {

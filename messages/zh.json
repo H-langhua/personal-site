@@ -127,11 +127,59 @@
     "unitMbps": "MB/s",
     "regionNames": ["华东", "华南", "华北", "西南", "海外"]
   },
+  "threeScene": {
+    "loading": "正在构建 3D 场景…",
+    "hint": "拖拽旋转 · 滚轮缩放 · 悬停高亮 · 点击对象查看详情",
+    "autoRotate": "自动旋转",
+    "particles": "粒子星尘",
+    "wireframe": "线框模式",
+    "reset": "重置视角",
+    "fullscreen": "全屏",
+    "exitFullscreen": "退出全屏",
+    "geometry": "几何体",
+    "material": "材质",
+    "orbitRadius": "轨道半径",
+    "unit": "场景单位",
+    "close": "关闭详情",
+    "materials": {
+      "metal": "金属",
+      "glow": "自发光",
+      "glass": "玻璃质感"
+    },
+    "objects": {
+      "core": {
+        "name": "核心晶体",
+        "description": "场景中心的自发光晶体，带边缘线框与呼吸浮动，由 Bloom 泛光后处理强化发光感。"
+      },
+      "torus-knot": {
+        "name": "环面结",
+        "description": "经典 TorusKnot 几何体沿倾斜轨道低速环绕，自发光材质在暗色背景下形成霓虹光晕。"
+      },
+      "dodecahedron": {
+        "name": "十二面体",
+        "description": "金属质感十二面体，环境反射来自程序化生成的 RoomEnvironment，无需外部 HDR 贴图。"
+      },
+      "octahedron": {
+        "name": "八面体",
+        "description": "八面体沿高阶倾斜轨道运行，用于验证射线拾取与 overlay mesh 悬停高亮策略。"
+      },
+      "torus": {
+        "name": "圆环",
+        "description": "圆环几何体在外圈轨道缓慢自转，投影阴影落在接收阴影的地面圆盘上。"
+      },
+      "capsule": {
+        "name": "胶囊体",
+        "description": "玻璃质感胶囊体基于物理材质的 transmission 实现折射，展示 PBR 材质体系。"
+      },
+      "box": {
+        "name": "立方体",
+        "description": "最接近中心的内圈立方体，用于体验点击聚焦时的相机平滑过渡与目标跟随。"
+      }
+    }
+  },
   "about": {
     "title": "关于我",
-    "subtitle": "我的经历与关注的方向",
-    "experience": "工作经历",
-    "education": "教育背景",
+    "subtitle": "技术栈与关注的方向",
     "downloadResume": "下载简历",
     "skills": "技能"
   },

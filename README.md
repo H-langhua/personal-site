@@ -11,7 +11,7 @@
 - 内置字典式 **i18n**（`zh` / `en`，无额外依赖，路由前缀 `/[locale]`）
 - 博客：本地 **MDX**（`gray-matter` + `next-mdx-remote/rsc` + `rehype-pretty-code`/Shiki）
 - 动效：**motion**（framer-motion）
-- 交互实验：**AntV X6** 图形编辑器
+- 交互实验：**AntV X6** 图形编辑器、**Three.js** 3D 场景、**ECharts** 实时大屏
 - 部署：**Vercel**
 
 ## 开发
@@ -41,6 +41,8 @@ components/
   ui/                       # shadcn 组件
   sections / 卡片 / 布局     # 业务组件
   demos/x6-editor.tsx       # X6 图形编辑器（客户端）
+  demos/three-scene/        # Three.js 3D 场景（客户端）
+  demos/realtime-dashboard/ # 实时数据大屏（客户端）
 content/blog/{zh,en}/*.mdx  # 博客文章
 data/                       # 站点/项目/技能/经历/Labs 数据
 lib/                        # i18n、字典、内容读取、格式化
@@ -52,7 +54,7 @@ proxy.ts                    # 语言检测与重定向（Next 16 的 middleware�
 
 - **站点信息（姓名、邮箱、社交链接）**：`data/site.ts`
 - **项目**：`data/projects.ts`（新增对象即可，列表/详情/首页精选自动生成）
-- **技能 / 经历**：`data/skills.ts`、`data/experience.ts`
+- **技能**：`data/skills.ts`
 - **实验室**：`data/labs.ts`；`labs/[slug]` 页面按 `slug` 渲染对应 demo
 - **博客**：在 `content/blog/{zh,en}/` 新增 `.mdx`，frontmatter：
 

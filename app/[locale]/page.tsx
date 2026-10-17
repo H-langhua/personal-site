@@ -28,7 +28,7 @@ export default async function HomePage({
   const featured = projects.filter((project) => project.featured);
   const posts = getAllPosts(locale).slice(0, 3);
   const stats = [
-    { value: "4+", label: dict.home.stats.years },
+    { value: "7+", label: dict.home.stats.years },
     { value: `${projects.length}`, label: dict.home.stats.projects },
     { value: `${labs.length}`, label: dict.home.stats.demos },
   ];

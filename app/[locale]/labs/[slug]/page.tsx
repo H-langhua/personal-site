@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { X6Editor } from "@/components/demos/x6-editor";
 import { RealtimeDashboard } from "@/components/demos/realtime-dashboard";
+import { ThreeScene } from "@/components/demos/three-scene";
 import { Section } from "@/components/section";
 import { Badge } from "@/components/ui/badge";
 import { getLab, labs } from "@/data/labs";
@@ -78,6 +79,9 @@ async function LabDetail({ params }: LabParams) {
         </div>
       </header>
 
+      {slug === "three-scene" ? (
+        <ThreeScene labels={dict.threeScene} />
+      ) : null}
       {slug === "x6-editor" ? <X6Editor labels={dict.editor} /> : null}
       {slug === "realtime-dashboard" ? (
         <RealtimeDashboard labels={dict.dashboard} />
