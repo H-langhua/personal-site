@@ -1,9 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { EChartsOption } from "echarts";
+import { Maximize2, Minimize2 } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 
 import { Chart } from "./chart";
+import type { InstanceStatus } from "./datasource";
 import { KpiCard, Panel, withAlpha } from "./panels";
 import { useMetrics } from "./use-metrics";
 
@@ -14,6 +18,9 @@ export type DashboardLabels = {
   paused: string;
   pause: string;
   resume: string;
+  fullscreen: string;
+  exitFullscreen: string;
+  dropped: string;
   qps: string;
   latency: string;
   p95: string;
@@ -24,9 +31,14 @@ export type DashboardLabels = {
   memory: string;
   traffic: string;
   resources: string;
-  statusCodes: string;
-  endpoints: string;
-  regions: string;
+  bandwidth: string;
+  bandwidthIn: string;
+  bandwidthOut: string;
+  instances: string;
+  slowRequests: string;
+  healthy: string;
+  degraded: string;
+  offline: string;
   eventLog: string;
   unitMs: string;
   unitPct: string;
@@ -58,12 +70,46 @@ const LEVEL_STYLES: Record<string, string> = {
   error: "text-rose-300",
 };
 
+const INSTANCE_STATUS_META: Record<
+  InstanceStatus,
+  { dot: string; text: string; bar: string }
+> = {
+  healthy: { dot: "bg-emerald-400", text: "text-emerald-300", bar: COLORS.emerald },
+  degraded: { dot: "bg-amber-400", text: "text-amber-300", bar: COLORS.amber },
+  offline: { dot: "bg-rose-500", text: "text-rose-300", bar: COLORS.rose },
+};
+
+const METHOD_STYLES: Record<string, string> = {
+  GET: "text-cyan-300",
+  POST: "text-violet-300",
+};
+
 export function RealtimeDashboard({ labels }: { labels: DashboardLabels }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(false);
-  const { latest, history, logs } = useMetrics({
+  const [fullscreen, setFullscreen] = useState(false);
+  const { latest, history, logs, dropped } = useMetrics({
     paused,
     regionNames: labels.regionNames,
   });
+
+  useEffect(() => {
+    const handle = () => {
+      setFullscreen(document.fullscreenElement === wrapRef.current);
+    };
+    document.addEventListener("fullscreenchange", handle);
+    return () => document.removeEventListener("fullscreenchange", handle);
+  }, []);
+
+  const toggleFullscreen = () => {
+    const element = wrapRef.current;
+    if (!element) return;
+    if (document.fullscreenElement === element) {
+      void document.exitFullscreen();
+    } else {
+      void element.requestFullscreen().catch(() => {});
+    }
+  };
 
   const times = useMemo(() => history.map((h) => formatClock(h.at)), [history]);
 
@@ -140,126 +186,113 @@ export function RealtimeDashboard({ labels }: { labels: DashboardLabels }) {
           lineStyle: { color: COLORS.violet, width: 2 },
         },
       ],
+      media: [
+        {
+          query: { maxWidth: 520 },
+          option: {
+            legend: {
+              top: 0,
+              right: 0,
+              textStyle: { fontSize: 9 },
+              itemWidth: 10,
+              itemHeight: 7,
+            },
+            grid: { left: 34, right: 36, top: 28, bottom: 20 },
+            xAxis: { axisLabel: { fontSize: 9, interval: 9 } },
+            yAxis: [
+              { name: "", axisLabel: { fontSize: 9 } },
+              { name: "", axisLabel: { fontSize: 9 } },
+            ],
+          },
+        },
+      ],
     };
   }, [history, times, labels]);
 
-  const statusOption = useMemo<EChartsOption>(() => {
-    const status = latest?.status ?? { ok: 0, client: 0, server: 0 };
+  const bandwidthOption = useMemo<EChartsOption>(() => {
+    const series = [
+      {
+        name: labels.bandwidthIn,
+        data: history.map((h) => h.bandwidth.inMbps),
+        color: COLORS.cyan,
+      },
+      {
+        name: labels.bandwidthOut,
+        data: history.map((h) => h.bandwidth.outMbps),
+        color: COLORS.emerald,
+      },
+    ];
     return {
       animation: false,
       tooltip: {
-        trigger: "item",
+        trigger: "axis",
         backgroundColor: "rgba(2,6,23,0.92)",
         borderColor: "rgba(34,211,238,0.35)",
         textStyle: { color: "#e2e8f0", fontSize: 11 },
       },
       legend: {
-        bottom: 0,
+        data: series.map((s) => s.name),
+        right: 0,
+        top: 0,
         textStyle: { color: "#94a3b8", fontSize: 11 },
         itemWidth: 12,
         itemHeight: 8,
       },
-      series: [
-        {
-          type: "pie",
-          radius: ["55%", "78%"],
-          center: ["50%", "44%"],
-          itemStyle: { borderColor: "#020617", borderWidth: 2 },
-          label: { show: false },
-          data: [
-            { name: "2xx", value: status.ok, itemStyle: { color: COLORS.emerald } },
-            { name: "4xx", value: status.client, itemStyle: { color: COLORS.amber } },
-            { name: "5xx", value: status.server, itemStyle: { color: COLORS.rose } },
-          ],
-        },
-      ],
-    };
-  }, [latest]);
-
-  const endpointsOption = useMemo<EChartsOption>(() => {
-    const endpoints = latest?.endpoints ?? [];
-    return {
-      animation: false,
-      grid: { left: 92, right: 40, top: 6, bottom: 6 },
-      xAxis: { type: "value", show: false },
-      yAxis: {
-        type: "category",
-        inverse: true,
-        data: endpoints.map((e) => e.name),
-        axisLine: { show: false },
-        axisTick: { show: false },
-        axisLabel: { color: "#94a3b8", fontSize: 11 },
-      },
-      series: [
-        {
-          type: "bar",
-          data: endpoints.map((e) => e.rps),
-          barWidth: 9,
-          itemStyle: {
-            borderRadius: 5,
-            color: {
-              type: "linear",
-              x: 0,
-              y: 0,
-              x2: 1,
-              y2: 0,
-              colorStops: [
-                { offset: 0, color: withAlpha(COLORS.cyan, 0.35) },
-                { offset: 1, color: COLORS.cyan },
-              ],
-            },
-          },
-          label: {
-            show: true,
-            position: "right",
-            color: "#cbd5e1",
-            fontSize: 10,
-          },
-        },
-      ],
-    };
-  }, [latest]);
-
-  const regionsOption = useMemo<EChartsOption>(() => {
-    const regions = latest?.regions ?? [];
-    return {
-      animation: false,
-      grid: { left: 34, right: 12, top: 16, bottom: 22 },
+      grid: { left: 42, right: 16, top: 34, bottom: 24 },
       xAxis: {
         type: "category",
-        data: regions.map((r) => r.name),
+        data: times,
+        boundaryGap: false,
         axisLine: { lineStyle: { color: GRID_LINE } },
-        axisTick: { show: false },
         axisLabel: { color: AXIS_TEXT, fontSize: 10 },
       },
       yAxis: {
         type: "value",
+        name: labels.unitMbps,
+        nameTextStyle: { color: AXIS_TEXT, fontSize: 10 },
         axisLabel: { color: AXIS_TEXT, fontSize: 10 },
         splitLine: { lineStyle: { color: GRID_LINE, type: "dashed" } },
       },
-      series: [
+      series: series.map((s) => ({
+        name: s.name,
+        type: "line" as const,
+        smooth: true,
+        symbol: "none",
+        data: s.data,
+        lineStyle: { color: s.color, width: 2 },
+        areaStyle: {
+          color: {
+            type: "linear" as const,
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: withAlpha(s.color, 0.35) },
+              { offset: 1, color: withAlpha(s.color, 0) },
+            ],
+          },
+        },
+      })),
+      media: [
         {
-          type: "bar",
-          data: regions.map((r) => r.value),
-          barWidth: 18,
-          itemStyle: {
-            borderRadius: [4, 4, 0, 0],
-            color: {
-              type: "linear",
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [
-                { offset: 0, color: COLORS.violet },
-                { offset: 1, color: withAlpha(COLORS.violet, 0.15) },
-              ],
+          query: { maxWidth: 520 },
+          option: {
+            legend: {
+              top: 0,
+              right: 0,
+              textStyle: { fontSize: 9 },
+              itemWidth: 10,
+              itemHeight: 7,
             },
+            grid: { left: 32, right: 10, top: 26, bottom: 20 },
+            xAxis: { axisLabel: { fontSize: 9, interval: 9 } },
+            yAxis: { name: "", axisLabel: { fontSize: 9 } },
           },
         },
       ],
     };
-  }, [latest]);
+  }, [history, times, labels]);
 
   const gauge = (
     value: number,
@@ -309,9 +342,20 @@ export function RealtimeDashboard({ labels }: { labels: DashboardLabels }) {
     { label: labels.throughput, value: latest?.throughput ?? 0, unit: labels.unitMbps, series: history.map((h) => h.throughput), color: COLORS.cyan },
   ];
 
+  const instances = latest?.instances ?? [];
+  const slow = latest?.slow ?? [];
+  const healthyCount = instances.filter((i) => i.status === "healthy").length;
+
   return (
-    <div className="rounded-2xl border border-cyan-400/20 bg-[#05070d] p-4 text-slate-200 shadow-[0_0_60px_-30px_rgba(34,211,238,0.8)] sm:p-5">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div
+      ref={wrapRef}
+      className={cn(
+        "rounded-2xl border border-cyan-400/20 bg-[#05070d] p-4 text-slate-200 shadow-[0_0_60px_-30px_rgba(34,211,238,0.8)] sm:p-5",
+        fullscreen &&
+          "flex h-screen w-full flex-col overflow-y-auto rounded-none border-0",
+      )}
+    >
+      <header className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold tracking-tight text-slate-100">
             {labels.title}
@@ -345,76 +389,211 @@ export function RealtimeDashboard({ labels }: { labels: DashboardLabels }) {
           >
             {paused ? labels.resume : labels.pause}
           </button>
+          {dropped > 0 ? (
+            <span
+              title={labels.dropped.replace("{count}", String(dropped))}
+              className="inline-flex items-center gap-1 rounded-full border border-rose-400/40 bg-rose-400/10 px-2.5 py-1 font-mono text-[11px] tabular-nums text-rose-300"
+            >
+              {labels.dropped.replace("{count}", String(dropped))}
+            </span>
+          ) : null}
+          <button
+            type="button"
+            aria-label={fullscreen ? labels.exitFullscreen : labels.fullscreen}
+            title={fullscreen ? labels.exitFullscreen : labels.fullscreen}
+            onClick={toggleFullscreen}
+            className="grid size-7 place-items-center rounded-full border border-cyan-400/30 bg-cyan-400/10 text-cyan-200 transition-colors hover:bg-cyan-400/20"
+          >
+            {fullscreen ? (
+              <Minimize2 className="size-3.5" />
+            ) : (
+              <Maximize2 className="size-3.5" />
+            )}
+          </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+      <div className="grid shrink-0 grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         {kpis.map((kpi) => (
           <KpiCard key={kpi.label} {...kpi} />
         ))}
       </div>
 
-      <div className="mt-3 grid gap-3 lg:grid-cols-3">
+      <div
+        className={cn(
+          "mt-3 grid gap-3 lg:grid-cols-3",
+          fullscreen ? "min-h-0 flex-1" : "lg:h-[280px]",
+        )}
+      >
         <Panel
           title={labels.traffic}
           hint={labels.qps}
           className="lg:col-span-2"
         >
-          <Chart option={trafficOption} className="h-64 w-full" />
+          <Chart option={trafficOption} className="h-60 w-full lg:h-full" />
         </Panel>
 
         <Panel title={labels.resources} bodyClassName="flex gap-2 overflow-hidden">
           <div className="min-w-0 flex-1">
             <Chart
               option={gauge(latest?.cpu ?? 0, COLORS.cyan, labels.cpu)}
-              className="h-40 w-full"
+              className="h-40 w-full lg:h-full"
             />
           </div>
           <div className="min-w-0 flex-1">
             <Chart
               option={gauge(latest?.memory ?? 0, COLORS.violet, labels.memory)}
-              className="h-40 w-full"
+              className="h-40 w-full lg:h-full"
             />
           </div>
         </Panel>
+      </div>
 
-        <Panel title={labels.statusCodes}>
-          <Chart option={statusOption} className="h-56 w-full" />
+      <div
+        className={cn(
+          "mt-3 grid gap-3 lg:grid-cols-3",
+          fullscreen ? "min-h-0 flex-1" : "lg:h-[280px]",
+        )}
+      >
+        <Panel
+          title={labels.bandwidth}
+          hint={`${latest?.bandwidth.inMbps ?? 0} ${labels.bandwidthIn} · ${latest?.bandwidth.outMbps ?? 0} ${labels.bandwidthOut} ${labels.unitMbps}`}
+          className="lg:col-span-2"
+        >
+          <Chart option={bandwidthOption} className="h-48 w-full lg:h-full" />
         </Panel>
 
-        <Panel title={labels.endpoints}>
-          <Chart option={endpointsOption} className="h-56 w-full" />
-        </Panel>
-
-        <Panel title={labels.regions}>
-          <Chart option={regionsOption} className="h-56 w-full" />
+        <Panel
+          title={labels.instances}
+          hint={`${healthyCount}/${instances.length} ${labels.healthy}`}
+          className="@container"
+        >
+          <div className="grid grid-cols-2 gap-1.5 @md:grid-cols-4">
+            {instances.map((instance) => {
+              const meta = INSTANCE_STATUS_META[instance.status];
+              const statusLabel = labels[instance.status];
+              return (
+                <div
+                  key={instance.id}
+                  title={`${instance.id} · ${instance.zone} · ${statusLabel}`}
+                  className="flex flex-col justify-center gap-1 rounded-lg border border-cyan-400/10 bg-slate-900/60 px-2 py-1"
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="truncate font-mono text-[10px] text-slate-400">
+                      {instance.id}
+                    </span>
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 shrink-0 rounded-full",
+                        meta.dot,
+                        instance.status === "offline" && "animate-pulse",
+                      )}
+                    />
+                  </div>
+                  <div className="h-1 overflow-hidden rounded-full bg-slate-800">
+                    <div
+                      className="h-full rounded-full transition-[width] duration-700"
+                      style={{
+                        width: `${instance.cpu}%`,
+                        backgroundColor: meta.bar,
+                        opacity: instance.status === "offline" ? 0.4 : 1,
+                      }}
+                    />
+                  </div>
+                  <div
+                    className={cn(
+                      "text-right font-mono text-[9px] tabular-nums",
+                      meta.text,
+                    )}
+                  >
+                    {instance.cpu}%
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </Panel>
       </div>
 
-      <Panel title={labels.eventLog} className="mt-3" hint={`${logs.length}`}>
-        <div className="h-44 space-y-1 overflow-y-auto pr-1 font-mono text-xs">
-          {logs.length === 0 ? (
-            <p className="text-slate-600">…</p>
-          ) : (
-            logs.map((entry) => (
-              <div
-                key={entry.id}
-                className="flex items-start gap-2 border-b border-white/5 pb-1 last:border-0"
-              >
-                <span className="shrink-0 text-slate-600">
-                  {formatClock(entry.at)}
-                </span>
-                <span className={`shrink-0 uppercase ${LEVEL_STYLES[entry.level]}`}>
-                  {entry.level}
-                </span>
-                <span className="min-w-0 truncate text-slate-300">
-                  {entry.message}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-      </Panel>
+      <div
+        className={cn(
+          "mt-3 grid gap-3 lg:grid-cols-3",
+          fullscreen ? "min-h-0 flex-1" : "lg:h-[280px]",
+        )}
+      >
+        <Panel title={labels.slowRequests} hint={`${slow.length}`}>
+          <div className="h-48 space-y-1 overflow-y-auto pr-1 font-mono text-xs lg:h-full">
+            {slow.length === 0 ? (
+              <p className="text-slate-600">…</p>
+            ) : (
+              slow.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex items-center gap-2 border-b border-white/5 pb-1 last:border-0"
+                >
+                  <span
+                    className={cn(
+                      "w-9 shrink-0 font-semibold",
+                      METHOD_STYLES[entry.method] ?? "text-slate-400",
+                    )}
+                  >
+                    {entry.method}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-slate-300">
+                    {entry.path}
+                  </span>
+                  <span
+                    className={
+                      entry.status === 200
+                        ? "shrink-0 text-emerald-300"
+                        : "shrink-0 text-rose-300"
+                    }
+                  >
+                    {entry.status}
+                  </span>
+                  <span
+                    className={cn(
+                      "w-16 shrink-0 text-right font-semibold tabular-nums",
+                      entry.ms >= 800 ? "text-rose-300" : "text-amber-300",
+                    )}
+                  >
+                    {entry.ms}ms
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </Panel>
+
+        <Panel
+          title={labels.eventLog}
+          className="lg:col-span-2"
+          hint={`${logs.length}`}
+        >
+          <div className="h-48 space-y-1 overflow-y-auto pr-1 font-mono text-xs lg:h-full">
+            {logs.length === 0 ? (
+              <p className="text-slate-600">…</p>
+            ) : (
+              logs.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex items-start gap-2 border-b border-white/5 pb-1 last:border-0"
+                >
+                  <span className="shrink-0 text-slate-600">
+                    {formatClock(entry.at)}
+                  </span>
+                  <span className={`shrink-0 uppercase ${LEVEL_STYLES[entry.level]}`}>
+                    {entry.level}
+                  </span>
+                  <span className="min-w-0 truncate text-slate-300">
+                    {entry.message}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 }

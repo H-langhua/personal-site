@@ -67,6 +67,16 @@ X6 把很多能力做成了插件，按需引入即可。
 - `@antv/x6-plugin-selection`：框选与多选
 - `@antv/x6-plugin-snapline`：对齐参考线
 - `@antv/x6-plugin-keyboard`：快捷键绑定
+- `@antv/x6-plugin-clipboard`：复制 / 粘贴
+- `@antv/x6-plugin-export`：导出 PNG / SVG
+- `@antv/x6-plugin-transform`：拖拽调整节点尺寸
+- `@antv/x6-plugin-minimap`：迷你地图导航
+
+选中样式不必将就默认值：监听 `cell:selected` 给节点挂上自定义 class，再用 CSS 绘制高亮环，即可替换插件默认的橙色虚线框。带作用域的 class 选择器优先级更高，能稳定覆盖插件运行时注入的样式。
+
+## 流程演练演示
+
+编排完成后，点“运行演示”就能看到流程一个个跑通：从开始节点出发沿连线依次点亮节点、让边流动起来，走完后再自动复位。实现上不需要额外插件——用 `getOutgoingEdges` 做一次遍历（判断节点优先走“是”分支，`visited` 集合防环），再用 `view.addClass` 切换节点与连线的运行态 class，配合 CSS 的 `stroke-dashoffset` 动画画出“电流”效果。过程中不修改模型数据，所以不会污染撤销历史。
 
 ## 数据与视图分离
 

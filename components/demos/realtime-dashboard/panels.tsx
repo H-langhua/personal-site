@@ -31,7 +31,7 @@ export function Panel({
   return (
     <section
       className={cn(
-        "flex flex-col rounded-xl border border-cyan-400/15 bg-slate-950/70 p-4 shadow-[0_0_30px_-18px_rgba(34,211,238,0.6)]",
+        "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-cyan-400/15 bg-slate-950/70 p-4 shadow-[0_0_30px_-18px_rgba(34,211,238,0.6)]",
         className,
       )}
     >

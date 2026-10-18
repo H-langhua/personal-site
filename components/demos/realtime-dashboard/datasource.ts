@@ -10,6 +10,24 @@ export type LogEntry = {
 export type EndpointStat = { name: string; rps: number };
 export type RegionStat = { name: string; value: number };
 export type StatusSplit = { ok: number; client: number; server: number };
+export type BandwidthStat = { inMbps: number; outMbps: number };
+
+export type InstanceStatus = "healthy" | "degraded" | "offline";
+
+export type InstanceStat = {
+  id: string;
+  zone: string;
+  cpu: number;
+  status: InstanceStatus;
+};
+
+export type SlowRequest = {
+  id: number;
+  method: "GET" | "POST";
+  path: string;
+  ms: number;
+  status: number;
+};
 
 export type Snapshot = {
   at: number;
@@ -21,9 +39,12 @@ export type Snapshot = {
   memory: number;
   connections: number;
   throughput: number;
+  bandwidth: BandwidthStat;
   status: StatusSplit;
   endpoints: EndpointStat[];
   regions: RegionStat[];
+  instances: InstanceStat[];
+  slow: SlowRequest[];
   log: LogEntry | null;
 };
 
@@ -46,9 +67,21 @@ const REGION_WEIGHTS = [0.33, 0.24, 0.2, 0.13, 0.1];
 
 const DEFAULT_REGION_NAMES = ["华东", "华南", "华北", "西南", "海外"];
 
+const INSTANCE_COUNT = 8;
+const INSTANCE_ZONES = ["cn-east-1a", "cn-east-1b", "cn-north-1a", "cn-south-1a"];
+const SLOW_LIMIT = 6;
+
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
+const round1 = (value: number) => Math.round(value * 10) / 10;
+
+type InstanceRuntime = {
+  id: string;
+  zone: string;
+  cpu: number;
+  offlineUntil: number;
+};
 
 type Runtime = {
   tick: number;
@@ -59,6 +92,8 @@ type Runtime = {
   memory: number;
   connections: number;
   throughput: number;
+  instances: InstanceRuntime[];
+  slow: SlowRequest[];
 };
 
 // Globally monotonic so ids stay unique across re-subscriptions
@@ -140,6 +175,48 @@ function step(rt: Runtime, regionNames: string[]): Snapshot {
     240,
   );
 
+  const fleetLoad = (rt.qps / 3400) * 86;
+  const now = Date.now();
+  rt.instances.forEach((instance, i) => {
+    if (now >= instance.offlineUntil && Math.random() < 0.006) {
+      instance.offlineUntil = now + rand(4000, 8000);
+    }
+    const target = clamp(
+      fleetLoad + (i - (INSTANCE_COUNT - 1) / 2) * 3 + (spiking ? rand(8, 22) : 0),
+      6,
+      98,
+    );
+    instance.cpu = clamp(
+      instance.cpu + (target - instance.cpu) * 0.16 + rand(-3.5, 3.5),
+      4,
+      99,
+    );
+  });
+  const instances: InstanceStat[] = rt.instances.map((instance) => ({
+    id: instance.id,
+    zone: instance.zone,
+    cpu: Math.round(instance.cpu),
+    status:
+      now < instance.offlineUntil
+        ? "offline"
+        : instance.cpu > 88
+          ? "degraded"
+          : "healthy",
+  }));
+
+  if (Math.random() < 0.6) {
+    rt.slow.push({
+      id: (logSequence += 1),
+      method: Math.random() < 0.7 ? "GET" : "POST",
+      path: ENDPOINTS[Math.floor(rand(0, ENDPOINTS.length))],
+      ms: Math.round(rt.latency * rand(2.4, 6.8)),
+      status: Math.random() < 0.12 ? (Math.random() < 0.6 ? 502 : 504) : 200,
+    });
+    rt.slow.sort((a, b) => b.ms - a.ms);
+    rt.slow = rt.slow.slice(0, SLOW_LIMIT);
+  }
+  const slow = rt.slow.map((item) => ({ ...item }));
+
   const errorMagnitude = (rt.errorRate / 100) * rt.qps;
   const server = Math.round(errorMagnitude * 0.35);
   const client = Math.round(errorMagnitude * 0.65);
@@ -163,7 +240,7 @@ function step(rt: Runtime, regionNames: string[]): Snapshot {
 
   const log = Math.random() < 0.75 ? createLog(rt, spiking) : null;
 
-  return {
+  const snapshot: Snapshot = {
     at: Date.now(),
     qps: Math.round(rt.qps),
     latency: Math.round(rt.latency),
@@ -172,12 +249,44 @@ function step(rt: Runtime, regionNames: string[]): Snapshot {
     cpu: Math.round(rt.cpu),
     memory: Math.round(rt.memory),
     connections: Math.round(rt.connections),
-    throughput: Math.round(rt.throughput * 10) / 10,
+    throughput: round1(rt.throughput),
+    bandwidth: {
+      inMbps: round1(rt.qps * 0.0115 * rand(0.92, 1.08)),
+      outMbps: round1(rt.qps * 0.0042 * rand(0.9, 1.1)),
+    },
     status: { ok, client, server },
     endpoints,
     regions,
+    instances,
+    slow,
     log,
   };
+
+  // Deliberately emit a dirty tick every 9th frame to simulate a flaky
+  // upstream; the ingest layer must drop, clamp or sanitize these.
+  if (rt.tick % 9 === 0) {
+    const variant = (Math.floor(rt.tick / 9) - 1) % 4;
+    if (variant === 0) {
+      return { ...snapshot, qps: Number.NaN };
+    }
+    if (variant === 1) {
+      return { ...snapshot, connections: -480, memory: 130, errorRate: 42 };
+    }
+    if (variant === 2) {
+      return { ...snapshot, endpoints: null as unknown as EndpointStat[] };
+    }
+    return {
+      ...snapshot,
+      log: {
+        id: logSequence,
+        at: Date.now(),
+        level: "warn",
+        message: `  upstream retry storm ${"x".repeat(400)}`,
+      },
+    };
+  }
+
+  return snapshot;
 }
 
 /** Simulated real-time metrics source (no backend required). */
@@ -196,6 +305,19 @@ export function createMockSource(
         memory: 61,
         connections: 3200,
         throughput: 42,
+        instances: Array.from({ length: INSTANCE_COUNT }, (_, i) => ({
+          id: `api-${Math.random().toString(16).slice(2, 8)}`,
+          zone: INSTANCE_ZONES[i % INSTANCE_ZONES.length],
+          cpu: 38 + Math.random() * 30,
+          offlineUntil: 0,
+        })),
+        slow: Array.from({ length: 3 }, () => ({
+          id: (logSequence += 1),
+          method: Math.random() < 0.7 ? ("GET" as const) : ("POST" as const),
+          path: ENDPOINTS[Math.floor(rand(0, ENDPOINTS.length))],
+          ms: Math.round(rand(320, 900)),
+          status: 200,
+        })).sort((a, b) => b.ms - a.ms),
       };
       // Emit immediately so the first paint isn't empty.
       onTick(step(rt, regionNames));

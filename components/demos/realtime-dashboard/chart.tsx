@@ -44,9 +44,14 @@ export function Chart({
     if (!el) return;
     const chart = echarts.init(el, undefined, { renderer: "canvas" });
     chartRef.current = chart;
-    const observer = new ResizeObserver(() => chart.resize());
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => chart.resize());
+    });
     observer.observe(el);
     return () => {
+      cancelAnimationFrame(frame);
       observer.disconnect();
       chart.dispose();
       chartRef.current = null;

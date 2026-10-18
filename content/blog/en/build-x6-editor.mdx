@@ -67,6 +67,16 @@ X6 ships many capabilities as plugins you opt into.
 - `@antv/x6-plugin-selection`: box and multi selection
 - `@antv/x6-plugin-snapline`: alignment guides
 - `@antv/x6-plugin-keyboard`: keyboard shortcuts
+- `@antv/x6-plugin-clipboard`: copy / paste
+- `@antv/x6-plugin-export`: PNG / SVG export
+- `@antv/x6-plugin-transform`: drag handles to resize nodes
+- `@antv/x6-plugin-minimap`: minimap navigation
+
+The selection look is not something to settle for: listen for `cell:selected`, tag the node with a custom class and draw a highlight ring in CSS. A scoped class rule outranks the plugin's runtime-injected styles, so replacing the default orange dashed box is stable.
+
+## Run-through demo
+
+Once the flow is wired up, a "Run demo" button walks it step by step: starting from the start node it lights up nodes and animates edges along the way, then resets itself. No extra plugin is needed — one traversal with `getOutgoingEdges` (decision nodes prefer the "Yes" branch, a `visited` set guards against loops), then `view.addClass` to toggle running-state classes on nodes and edges, with a CSS `stroke-dashoffset` animation drawing the "current". It never touches the model data, so the undo history stays clean.
 
 ## Separate data from view
 
